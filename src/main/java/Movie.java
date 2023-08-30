@@ -1,9 +1,9 @@
 public class Movie {
-    String link;
-    String movieName;
-    String director;
-    int year;
-    int jumpScareCount;
+    private String link;
+    private String movieName;
+    private String director;
+    private int year;
+    private int jumpScareCount;
 
     public Movie(String link, String movieName, String director, int year, int jumpScareCount) {
         this.link = link;
