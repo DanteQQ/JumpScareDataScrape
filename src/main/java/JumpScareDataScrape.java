@@ -2,14 +2,22 @@ import com.google.gson.Gson;
 import org.jsoup.Jsoup;
 
 import java.io.IOException;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 
 public class JumpScareDataScrape {
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws IOException, InterruptedException {
         //System.out.println(getMovieList("https://wheresthejump.com/full-movie-list/"));
         //splitMovieRows(getMovieList("https://wheresthejump.com/full-movie-list/"));
         //System.out.println(getMovieJumpScareTimes("https://wheresthejump.com/jump-scares-in-rec-2007/"));
         //splitMovieJumpScareTimes(getMovieJumpScareTimes("https://wheresthejump.com/jump-scares-in-rec-2007/"));
         //System.out.println(jumpScareTimesToJson(splitMovieJumpScareTimes(getMovieJumpScareTimes("https://wheresthejump.com/jump-scares-in-rec-2007/"))));
+        //putMoviesToDatabase(splitMovieRows(getMovieList("https://wheresthejump.com/full-movie-list/")),"http://localhost:8080/movies");
+        //System.out.println(moviesToJson(splitMovieRows(getMovieList("https://wheresthejump.com/full-movie-list/"))));
     }
 
     public static String getMovieList(String url) throws IOException {
@@ -33,7 +41,7 @@ public class JumpScareDataScrape {
     }
 
     public static String[][] splitMovieRows(String movieList) {
-        String[] rows = movieList.replaceFirst("\n", "").split("\n");
+        String[] rows = movieList.split("\n");
         String[][] splitMovieList = new String[rows.length][5];
         for (int i = 0; i < rows.length; i++) {
             if (!rows[i].isEmpty()) {
@@ -80,6 +88,45 @@ public class JumpScareDataScrape {
         return splitJumpScareList;
     }
 
+    public static void putMoviesToDatabase (String[][] movieList, String url) throws InterruptedException {
+        for (String[] strings : movieList) {
+            try {
+                HttpClient httpClient = HttpClients.createDefault();
+
+                HttpPost httpPost = new HttpPost(url);
+                httpPost.setHeader("accept", "*/*");
+                httpPost.setHeader("Content-Type", "application/json;charset=UTF-8");
+
+                String postData = "{\n" +
+                        "  \"link\": \"" + strings[0] + "\",\n" +
+                        "  \"movieName\": \"" + strings[1] + "\",\n" +
+                        "  \"director\": \"" + strings[2] + "\",\n" +
+                        "  \"year\": " + strings[3] + ",\n" +
+                        "  \"jumpScareCount\": " + strings[4] + "\n" +
+                        "}";
+
+                System.out.println(postData);
+                StringEntity entity = new StringEntity(postData, "UTF-8");
+                httpPost.setEntity(entity);
+
+                HttpResponse response = httpClient.execute(httpPost);
+
+                int responseCode = response.getStatusLine().getStatusCode();
+                System.out.println("Response Code: " + responseCode);
+
+                String responseBody = EntityUtils.toString(response.getEntity());
+                System.out.println("Response Body: " + responseBody);
+
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            Thread.sleep(200);
+        }
+    }
+    public static String moviesToJson(String[][] movieList) {
+        Gson gson = new Gson();
+        return gson.toJson(movieList);
+    }
     public static String jumpScareTimesToJson(String[][] jumpScareArray) {
         Gson gson = new Gson();
         return gson.toJson(jumpScareArray);

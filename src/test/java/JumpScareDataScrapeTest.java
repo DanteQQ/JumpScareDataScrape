@@ -30,8 +30,8 @@ class JumpScareDataScrapeTest {
         // Arrange
         String jumpScareTimesList =
                 "00:18:00 – A body falls down from the stairwell next to a group of people on the ground floor.\n" +
-                        "00:19:54 – Someone runs through the door space.\n" +
-                        "01:05:51 – The camera spins around in the attic where a boy’s face appears. – Strong";
+                "00:19:54 – Someone runs through the door space.\n" +
+                "01:05:51 – The camera spins around in the attic where a boy’s face appears. – Strong";
 
         String[][] expectedSplitJumpScareTimesList = {
                 {"00:18:00", "A body falls down from the stairwell next to a group of people on the ground floor.", null},
