@@ -1,7 +1,14 @@
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import org.apache.http.client.methods.HttpGet;
 import org.jsoup.Jsoup;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -13,11 +20,16 @@ public class JumpScareDataScrape {
     public static void main(String[] args) throws IOException, InterruptedException {
         //System.out.println(getMovieList("https://wheresthejump.com/full-movie-list/"));
         //splitMovieRows(getMovieList("https://wheresthejump.com/full-movie-list/"));
+
         //System.out.println(getMovieJumpScareTimes("https://wheresthejump.com/jump-scares-in-rec-2007/"));
         //splitMovieJumpScareTimes(getMovieJumpScareTimes("https://wheresthejump.com/jump-scares-in-rec-2007/"));
+
         //System.out.println(jumpScareTimesToJson(splitMovieJumpScareTimes(getMovieJumpScareTimes("https://wheresthejump.com/jump-scares-in-rec-2007/"))));
         //putMoviesToDatabase(splitMovieRows(getMovieList("https://wheresthejump.com/full-movie-list/")),"http://localhost:8080/movies");
+        putJumpScaresToDatabase(moviesToGson(getMoviesFromDatabase("http://localhost:8080/movies")), "http://localhost:8080//jumpScareTimes");
         //System.out.println(moviesToJson(splitMovieRows(getMovieList("https://wheresthejump.com/full-movie-list/"))));
+        //System.out.println(getMoviesFromDatabase("http://localhost:8080/movies"));
+        //moviesToGson(getMoviesFromDatabase("http://localhost:8080/movies"));
     }
 
     public static String getMovieList(String url) throws IOException {
@@ -123,12 +135,83 @@ public class JumpScareDataScrape {
             Thread.sleep(200);
         }
     }
-    public static String moviesToJson(String[][] movieList) {
-        Gson gson = new Gson();
-        return gson.toJson(movieList);
+
+    public static void putJumpScaresToDatabase (List<Movie> movies, String url) throws InterruptedException, IOException {
+        for (Movie movie : movies) {
+            String[][] jumpScareArray = splitMovieJumpScareTimes(getMovieJumpScareTimes(movie.getLink()));
+            for (String[] strings : jumpScareArray) {
+                try {
+                    HttpClient httpClient = HttpClients.createDefault();
+
+                    HttpPost httpPost = new HttpPost(url);
+                    httpPost.setHeader("accept", "*/*");
+                    httpPost.setHeader("Content-Type", "application/json;charset=UTF-8");
+
+                    String postData;
+                    if (strings[2] != null) {
+                        postData = "{\n" +
+                                "  \"movieId\": \"" + movie.getId() + "\",\n" +
+                                "  \"time\": \"" + strings[0] + "\",\n" +
+                                "  \"text\": \"" + strings[1] + "\",\n" +
+                                "  \"strong\": \"true\"\n" +
+                                "}";
+                    } else {
+                        postData = "{\n" +
+                                "  \"movieId\": \"" + movie.getId() + "\",\n" +
+                                "  \"time\": \"" + strings[0] + "\",\n" +
+                                "  \"text\": \"" + strings[1] + "\",\n" +
+                                "  \"strong\": \"false\"\n" +
+                                "}";
+                    }
+
+                    System.out.println(postData);
+                    StringEntity entity = new StringEntity(postData, "UTF-8");
+                    httpPost.setEntity(entity);
+
+                    HttpResponse response = httpClient.execute(httpPost);
+
+                    int responseCode = response.getStatusLine().getStatusCode();
+                    System.out.println("Response Code: " + responseCode);
+
+                    String responseBody = EntityUtils.toString(response.getEntity());
+                    System.out.println("Response Body: " + responseBody);
+
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                Thread.sleep(50);
+            }
+        }
     }
-    public static String jumpScareTimesToJson(String[][] jumpScareArray) {
+
+    public static String getMoviesFromDatabase (String url) {
+        HttpClient httpClient = HttpClients.createDefault();
+        HttpGet httpGet = new HttpGet(url);
+        String output = null;
+        try {
+            HttpResponse response = httpClient.execute(httpGet);
+
+            int statusCode = response.getStatusLine().getStatusCode();
+
+            if (statusCode == 200) {
+                String responseBody = EntityUtils.toString(response.getEntity());
+
+                System.out.println("Response:");
+                System.out.println(responseBody);
+                output = responseBody;
+            } else {
+                System.out.println("GET request failed with status code: " + statusCode);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return output;
+    }
+
+    public static List<Movie> moviesToGson(String movieListJson) {
         Gson gson = new Gson();
-        return gson.toJson(jumpScareArray);
+        Type listType = new TypeToken<ArrayList<Movie>>(){}.getType();
+        List<Movie> movies = gson.fromJson(movieListJson, listType);
+        return movies;
     }
 }
